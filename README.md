@@ -1,181 +1,362 @@
-# GPU 메모리 모니터
+# System Monitor
 
-[![PyPI version](https://badge.fury.io/py/gpu-memory-monitor.svg)](https://badge.fury.io/py/gpu-memory-monitor)
-[![Python Version](https://img.shields.io/pypi/pyversions/gpu-memory-monitor.svg)](https://pypi.org/project/gpu-memory-monitor/)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-CuPy를 사용하여 GPU와 CPU의 메모리 사용량을 모니터링하는 Python 패키지입니다.
+시스템 리소스(CPU, GPU 메모리)를 모니터링하는 Python 라이브러리입니다. **Google Colab**, **Jupyter Notebook**, **VSCode** 등 모든 환경에서 동작하도록 최적화되었습니다.
 
-## 목차
+## 주요 기능
 
-- [GPU 메모리 모니터](#gpu-메모리-모니터)
-  - [목차](#목차)
-  - [특징](#특징)
-  - [설치 방법](#설치-방법)
-  - [시스템 요구사항](#시스템-요구사항)
-  - [사용 방법](#사용-방법)
-    - [기본 사용법](#기본-사용법)
-  - [출력 예시](#출력-예시)
-  - [고급 사용법](#고급-사용법)
-    - [커스텀 CuPy 인스턴스 사용](#커스텀-cupy-인스턴스-사용)
-    - [예외 처리](#예외-처리)
-  - [개발 환경 설정](#개발-환경-설정)
-    - [개발 의존성 설치](#개발-의존성-설치)
-    - [테스트 실행](#테스트-실행)
-    - [코드 스타일 검사](#코드-스타일-검사)
-  - [기여하기](#기여하기)
-  - [라이선스](#라이선스)
-  - [추가 자료](#추가-자료)
-
-## 특징
-
-- 실시간 CPU/GPU 메모리 모니터링
-- 상세한 메모리 사용량 정보 제공
-- 유연한 로깅 시스템
-- 임계값 기반 경고 시스템
-- 사용자 정의 가능한 설정
-- 체계적인 에러 처리
-- 메모리 사용량 통계
+- **CPU 메모리 모니터링** (psutil 기반)
+- **GPU 메모리 모니터링** (CuPy 기반) 
+- **실시간 메모리 사용량 출력**
+- **메모리 단위 변환 유틸리티**
+- **Colab/Jupyter 환경 최적화된 로깅**
+- **VSCode/로컬 환경 완벽 지원**
 
 ## 설치 방법
 
+### 자동 설치 스크립트 (권장)
+
+프로젝트를 자동으로 클론하고 환경에 맞는 패키지를 설치합니다:
+
 ```bash
-# 기본 설치 (CuPy 제외)
-pip install gpu-memory-monitor
-
-# CUDA 11.x 사용시
-pip install gpu-memory-monitor[cuda11]
-
-# CUDA 12.x 사용시
-pip install gpu-memory-monitor[cuda12]
+# 설치 스크립트 다운로드 후 실행
+curl -O https://raw.githubusercontent.com/xonme888/config/main/install.sh
+chmod +x install.sh
+./install.sh
 ```
 
-## 시스템 요구사항
+### Git을 통한 수동 설치
 
-- Python >= 3.7
-- CUDA 11.x 또는 12.x
-- CuPy
-- psutil
+```bash
+# 프로젝트 클론
+git clone https://github.com/xonme888/config.git system-monitor
+cd system-monitor
 
-## 사용 방법
+# 의존성 설치
+pip install psutil
+
+# GPU 지원이 필요한 경우
+pip install cupy-cuda12x  # CUDA 12.x용
+# 또는
+pip install cupy-cuda11x  # CUDA 11.x용
+
+# 패키지 설치
+pip install -e .
+```
+
+### 의존성만 설치 (개발용)
+
+프로젝트가 이미 있는 경우 의존성만 설치:
+
+```bash
+# 기본 설치 (CPU 모니터링만)
+pip install psutil
+
+# GPU 모니터링 포함 설치
+pip install psutil cupy-cuda12x  # CUDA 12.x
+pip install psutil cupy-cuda11x  # CUDA 11.x
+```
+
+### Google Colab에서 설치
+
+```bash
+# Colab 셀에서 실행
+!git clone https://github.com/xonme888/config.git system-monitor
+%cd system-monitor
+!pip install psutil cupy-cuda12x
+!pip install -e .
+```
+
+### 빠른 시작
+
+설치 후 바로 데모를 실행해보세요:
+
+```bash
+python demo.py
+```
+
+## 사용법
 
 ### 기본 사용법
 
 ```python
-from gpu_memory_monitor import GPUMemoryMonitor
+from system_monitor import SystemMonitor, setup_logger
 
-# GPU와 CPU 모두 모니터링
-monitor = GPUMemoryMonitor(use_gpu=True)
+# 로깅 설정 (Colab과 VSCode 모두에서 로그 출력)
+setup_logger('system_monitor', force_setup=True)
 
-# CPU 메모리 확인
-monitor.print_cpu_memory("CPU 상태")
+# 시스템 모니터 초기화
+monitor = SystemMonitor()
 
-# GPU 메모리 확인
-monitor.print_gpu_memory("GPU 상태")
+# 메모리 사용량 출력
+monitor.print_memory_usage("현재 상태", include_cpu=True)
+```
 
-# 전체 시스템 메모리 상태 확인
-monitor.print_memory_usage("시스템 상태", include_cpu=True)
+### CPU 전용 모니터링
 
-# 모니터링 가능 여부 확인
+```python
+from system_monitor import SystemMonitor
+
+# GPU 없는 환경에서 안전하게 사용
+cpu_monitor = SystemMonitor(use_gpu=False)
+cpu_monitor.print_cpu_memory("CPU 메모리 상태")
+```
+
+### 수동 메모리 정보 접근
+
+```python
+from system_monitor import SystemMonitor
+
+monitor = SystemMonitor()
+
+# CPU 메모리 정보
+cpu_info = monitor.get_cpu_memory()
+if cpu_info:
+    print(f"CPU: {cpu_info.used:.1f}MB / {cpu_info.total:.1f}MB")
+    print(f"사용률: {cpu_info.usage_percent:.1f}%")
+
+# GPU 메모리 정보
+gpu_info = monitor.get_gpu_memory()
+if gpu_info:
+    print(f"GPU: {gpu_info.used:.1f}MB / {gpu_info.total:.1f}MB")
+    print(f"사용률: {gpu_info.usage_percent:.1f}%")
+```
+
+### 메모리 단위 변환
+
+```python
+from system_monitor import MemoryConverter
+
+bytes_value = 1024 * 1024 * 1024  # 1GB
+
+# 단위 변환
+mb_value = MemoryConverter.to_mb(bytes_value)
+gb_value = MemoryConverter.to_gb(bytes_value)
+
+# 포맷팅
+formatted = MemoryConverter.format_memory(bytes_value, 'GB')
+print(f"포맷팅된 값: {formatted}")
+```
+
+## 환경별 사용법
+
+### Google Colab에서 사용
+
+#### 방법 1: 환경 최적화 모니터 (권장)
+```python
+# Colab 셀에서 실행
+!pip install psutil cupy-cuda12x
+
+from system_monitor import setup_environment_optimized_monitor
+
+# 환경에 최적화된 모니터 자동 설정
+monitor = setup_environment_optimized_monitor()
+monitor.print_memory_usage("Colab 메모리 상태", include_cpu=True)
+```
+
+#### 방법 2: 수동 설정
+```python
+from system_monitor import SystemMonitor, setup_logger
+
+# 로깅 설정 (Colab에서 로그 출력 보장)
+setup_logger('system_monitor', force_setup=True)
+
+# GPU 런타임 체크
+monitor = SystemMonitor()
 if monitor.has_gpu:
-    print("GPU 모니터링 가능")
-if monitor.has_cpu:
-    print("CPU 모니터링 가능")
+        print("GPU 런타임이 활성화되어 있습니다!")
+    else:
+        print("경고: GPU 런타임을 활성화하세요: 런타임 > 런타임 유형 변경 > GPU")# 메모리 상태 출력
+monitor.print_memory_usage("Colab 메모리 상태", include_cpu=True)
 ```
 
-## 출력 예시
-
-```
-[2025-09-26 10:30:15] - gpu_memory_monitor - INFO - CPU 상태
-  CPU: 8500.25 MB / 16384.00 MB (사용률: 51.9%)
-
-[2025-09-26 10:30:15] - gpu_memory_monitor - INFO - GPU 상태
-  GPU: 2048.50 MB / 8192.00 MB (사용률: 25.0%)
-
-[2025-09-26 10:30:15] - gpu_memory_monitor - INFO - 시스템 상태
-  CPU: 8500.25 MB / 16384.00 MB
-  GPU: 2048.50 MB / 8192.00 MB
-```
-
-## 고급 사용법
-
-### 커스텀 CuPy 인스턴스 사용
+### Jupyter Notebook에서 사용
 
 ```python
-import cupy as cp
+from system_monitor import SystemMonitor, setup_logger
+import logging
 
-# 특정 CuPy 인스턴스 사용
-monitor = MemoryMonitorManager(cupy_instance=cp)
+# 로깅 레벨 설정
+setup_logger('system_monitor', level=logging.INFO, force_setup=True)
+
+monitor = SystemMonitor()
+monitor.print_memory_usage("Jupyter 환경", include_cpu=True)
 ```
 
-### 예외 처리
+### VSCode/로컬 환경에서 사용
 
 ```python
-from gpu_memory_monitor import GPUNotAvailableError, MemoryMonitorError
+from system_monitor import SystemMonitor, setup_logger
 
-try:
-    monitor = MemoryMonitorManager()
-    gpu_info = monitor.get_gpu_memory()
-except GPUNotAvailableError as e:
-    print(f"GPU 사용 불가: {e}")
-except MemoryMonitorError as e:
-    print(f"메모리 모니터링 오류: {e}")
+# 개발 환경용 상세 로깅
+setup_logger('system_monitor', level=logging.DEBUG)
+
+monitor = SystemMonitor()
+monitor.print_memory_usage("개발 환경", include_cpu=True)
 ```
 
-## 개발 환경 설정
+## API 문서
 
-### 개발 의존성 설치
+### SystemMonitor 클래스
+
+#### 생성자
+```python
+SystemMonitor(use_gpu: bool = True, cupy_instance=None)
+```
+
+- `use_gpu`: GPU 모니터링 사용 여부 (기본값: True)
+- `cupy_instance`: 사용할 CuPy 인스턴스 (선택사항)
+
+#### 속성
+- `has_cpu: bool` - CPU 모니터링 가능 여부
+- `has_gpu: bool` - GPU 모니터링 가능 여부
+
+#### 메서드
+- `get_cpu_memory() -> Optional[MemoryInfo]` - CPU 메모리 정보 반환
+- `get_gpu_memory() -> Optional[MemoryInfo]` - GPU 메모리 정보 반환
+- `print_cpu_memory(label: str = "CPU Memory")` - CPU 메모리 상태 출력
+- `print_gpu_memory(label: str = "GPU Memory")` - GPU 메모리 상태 출력
+- `print_memory_usage(label: str = "Memory Status", include_cpu: bool = False)` - 전체 메모리 상태 출력
+
+### MemoryInfo 클래스
+
+메모리 정보를 담는 데이터 클래스입니다.
+
+```python
+class MemoryInfo:
+    used: float      # 사용된 메모리 (MB)
+    total: float     # 전체 메모리 (MB)
+    usage_percent: float  # 사용률 (%)
+```
+
+### MemoryConverter 클래스
+
+메모리 단위 변환을 위한 유틸리티 클래스입니다.
+
+```python
+MemoryConverter.to_mb(bytes_value: int) -> float    # bytes를 MB로 변환
+MemoryConverter.to_gb(bytes_value: int) -> float    # bytes를 GB로 변환
+MemoryConverter.format_memory(bytes_value: int, unit: str = 'MB') -> str  # 포맷팅
+```
+
+### 로깅 함수들
+
+```python
+setup_logger(name: str = 'system_monitor', level: int = logging.INFO, force_setup: bool = False) -> logging.Logger
+get_logger(name: str = 'system_monitor') -> logging.Logger
+reset_logger_config()  # 로거 설정 초기화
+```
+
+## 문제 해결
+
+### 로그가 보이지 않을 때
+
+```python
+from system_monitor import setup_logger, reset_logger_config
+
+# 로거 설정 초기화 후 재설정
+reset_logger_config()
+setup_logger('system_monitor', force_setup=True)
+```
+
+### GPU 인식 안될 때
+
+1. **CUDA 드라이버 확인**
+   ```bash
+   nvidia-smi
+   ```
+
+2. **CuPy 설치 확인**
+   ```python
+   try:
+       import cupy
+       print(f"CuPy 버전: {cupy.__version__}")
+   except ImportError:
+       print("CuPy가 설치되지 않았습니다.")
+   ```
+
+3. **Colab에서 GPU 런타임 활성화**
+   - 런타임 → 런타임 유형 변경 → 하드웨어 가속기: GPU
+
+### CPU 메모리 인식 안될 때
 
 ```bash
-pip install gpu-memory-monitor[dev]
+pip install --upgrade psutil
 ```
 
-### 테스트 실행
+## 테스트
 
 ```bash
-pytest tests/
+# 전체 테스트 실행
+python -m pytest tests/
+
+# 특정 테스트 실행
+python -m pytest tests/test_monitor.py -v
+
+# 커버리지 포함 테스트
+python -m pytest tests/ --cov=system_monitor --cov-report=html
 ```
 
-### 코드 스타일 검사
+## 예제 파일
 
-패키지 설치 시 기본적인 코드 스타일 도구들이 자동으로 함께 설치됩니다. 다음 명령어로 코드 스타일을 검사하고 수정할 수 있습니다:
+프로젝트에는 다음 예제 파일들이 포함되어 있습니다:
+
+- `example.py` - 기본 사용법 예제
+- `colab_example.py` - Google Colab/Jupyter 환경용 예제
 
 ```bash
-# 코드 자동 포맷팅
-black .
-
-# import 문 자동 정렬
-isort .
-
-# 타입 힌트 검사
-mypy .
+# 예제 실행
+python example.py
+python colab_example.py
 ```
 
-추가 개발 도구가 필요한 경우 다음과 같이 설치할 수 있습니다:
-```bash
-pip install gpu-memory-monitor[dev]
+## 프로젝트 구조
+
+```
+system_monitor/
+├── __init__.py          # 메인 모듈
+├── monitor.py           # SystemMonitor 클래스
+├── logging_config.py    # 로깅 설정
+├── core/
+│   ├── __init__.py
+│   ├── info.py         # MemoryInfo 클래스
+│   └── converter.py    # MemoryConverter 클래스
+└── monitors/
+    ├── __init__.py
+    ├── base.py         # BaseMonitor 추상 클래스
+    ├── cpu.py          # CPU 모니터
+    └── gpu.py          # GPU 모니터
 ```
 
-이 명령어를 통해 다음 추가 도구들이 설치됩니다:
-- pytest-cov: 테스트 커버리지 측정
-- flake8: 코드 린팅
-- pylint: 정적 코드 분석
-- sphinx: 문서 생성
+## 하위 호환성
+
+기존 코드와의 호환성을 위해 다음 별칭들을 제공합니다:
+
+```python
+# 이전 버전 호환
+from system_monitor import GPUMemoryMonitor, MemoryMonitorManager
+
+# 모두 SystemMonitor와 동일
+monitor = GPUMemoryMonitor()  # SystemMonitor()와 같음
+manager = MemoryMonitorManager()  # SystemMonitor()와 같음
+```
 
 ## 기여하기
 
-1. 이 저장소를 Fork 합니다
-2. 새로운 Feature 브랜치를 생성합니다 (`git checkout -b feature/amazing-feature`)
-3. 변경사항을 커밋합니다 (`git commit -m 'Add amazing feature'`)
-4. 브랜치에 Push 합니다 (`git push origin feature/amazing-feature`)
-5. Pull Request를 생성합니다
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/name`)
+3. Commit your Changes (`git commit -m 'Add --'`)
+4. Push to the Branch (`git push origin feature/name`)
+5. Open a Pull Request
 
 ## 라이선스
 
-이 프로젝트는 MIT 라이선스를 따릅니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
+MIT License로 배포됩니다. 자세한 내용은 `LICENSE` 파일을 참조하세요.
 
-## 추가 자료
+## 지원
 
-- [API 문서](docs/API.md)
-- [변경 이력](CHANGELOG.md)
-- [기여 가이드](CONTRIBUTING.md)
+문제가 있거나 기능 요청이 있다면 [Issues](https://github.com/xonme888/system-monitor/issues)를 통해 알려주세요.
+
+---

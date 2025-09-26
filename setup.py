@@ -23,13 +23,14 @@ setup(
             "flake8>=6.1.0",
         ],
     },
-    python_requires="==3.11.*",  # Python 3.11.x 버전만 지원
+    python_requires=">=3.11, <=3.12.11",  # Python 3.11 ~ 3.12.11 지원
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3 :: Only",
     ],
 )

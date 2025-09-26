@@ -9,12 +9,19 @@ from .core.dependency import DependencyManager
 # 기본 로거 설정
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-if not logger.handlers:
-    handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    ))
-    logger.addHandler(handler)
+
+# 기존 핸들러 제거
+for handler in logger.handlers[:]:
+    logger.removeHandler(handler)
+
+# 로그 핸들러 설정
+handler = logging.StreamHandler()
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
+# 상위 로거로 전파 방지
+logger.propagate = False
 
 # 의존성 관리자 초기화
 dep_manager = DependencyManager()
